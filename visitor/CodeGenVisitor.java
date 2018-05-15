@@ -10,11 +10,13 @@ public class CodeGenVisitor extends DepthFirstVisitor
     static Method currMethod;
     static SymbolTable symbolTable;
     PrintWriter out;
+    int label_count;
 
     public CodeGenVisitor( SymbolTable s, PrintWriter out )
     {
         symbolTable = s;
         this.out = out;
+        this.label_count = 0;
     }
 
     // MainClass m;
@@ -93,6 +95,21 @@ public class CodeGenVisitor extends DepthFirstVisitor
     // cgen: if (e) s1 else s2
     public void visit( If n )
     {
+        n.e.accept( this );
+        String label1 = "$L" + label_count++;
+        String label2 = "$L" + label_count++;
+
+        // beq  $2,$0,$L2
+        out.println( "beq $a0, 0, " + label1 + "\n" );
+        n.s1.accept( this );
+        out.println( "j " + label2 + "\n" );
+
+        // label1 -> s1
+        out.println( label1 + ":\n" );
+        n.s2.accept( this );
+
+        // label2 -> next
+        out.println( label2 + ":\n" );
     }
 
     // Exp e;
@@ -144,12 +161,28 @@ public class CodeGenVisitor extends DepthFirstVisitor
     // cgen: e1 && e2
     public void visit( And n )
     {
+        n.e1.accept( this );
+        out.println( "sw $a0, 0($sp)" );   // push value of e1 to stack
+        out.println( "addiu $sp, $sp, -4" );
+
+        n.e2.accept( this );
+        out.println( "lw $t1, 4($sp)" );      // $t1 = stack top
+        out.println( "and $a0, $t1, $a0" );   // $a0 = $a0 && stack top
+        out.println( "addiu $sp, $sp, 4\n" ); // pop
     }
 
     // Exp e1,e2;
     // cgen: e1 < e2
     public void visit( LessThan n )
     {
+        n.e1.accept( this );
+        out.println( "sw $a0, 0($sp)" );   // push value of e1 to stack
+        out.println( "addiu $sp, $sp, -4" );
+
+        n.e2.accept( this );
+        out.println( "lw $t1, 4($sp)" );      // $t1 = stack top
+        out.println( "slt $a0, $t1, $a0" );   // $a0 = $a0 < stack top
+        out.println( "addiu $sp, $sp, 4\n" ); // pop
     }
 
     // Exp e1,e2;
@@ -161,8 +194,8 @@ public class CodeGenVisitor extends DepthFirstVisitor
         out.println( "addiu $sp, $sp, -4" );
 
         n.e2.accept( this );
-        out.println( "lw $t1, 4($sp)" );   // $t1 = stack top
-        out.println( "add $a0, $t1, $a0" ); // $a0 = $a0 + stack top
+        out.println( "lw $t1, 4($sp)" );      // $t1 = stack top
+        out.println( "add $a0, $t1, $a0" );   // $a0 = $a0 + stack top
         out.println( "addiu $sp, $sp, 4\n" ); // pop
     }
 
@@ -175,8 +208,8 @@ public class CodeGenVisitor extends DepthFirstVisitor
         out.println( "addiu $sp, $sp, -4" );
 
         n.e2.accept( this );
-        out.println( "lw $t1, 4($sp)" );   // $t1 = stack top
-        out.println( "sub $a0, $t1, $a0" ); // $a0 = stack top - $a0
+        out.println( "lw $t1, 4($sp)" );      // $t1 = stack top
+        out.println( "sub $a0, $t1, $a0" );   // $a0 = stack top - $a0
         out.println( "addiu $sp, $sp, 4\n" ); // pop
     }
 
@@ -189,9 +222,9 @@ public class CodeGenVisitor extends DepthFirstVisitor
         out.println( "addiu $sp, $sp, -4" );
 
         n.e2.accept( this );
-        out.println( "lw $t1, 4($sp)" ); // $t1 = stack top
-        out.println( "mult $t1, $a0" ); // $a0 = stack top - $a0
-        out.println( "mflo $a0" );      // 32 least significant bits of multiplication to $a0
+        out.println( "lw $t1, 4($sp)" );      // $t1 = stack top
+        out.println( "mult $t1, $a0" );       // $a0 = stack top * $a0
+        out.println( "mflo $a0" );            // 32 least significant bits of multiplication to $a0
         out.println( "addiu $sp, $sp, 4\n" ); // pop
     }
 
@@ -231,6 +264,8 @@ public class CodeGenVisitor extends DepthFirstVisitor
     // cgen: !e
     public void visit( Not n )
     {
+        n.e.accept( this );
+        out.println( "nor $a0, $a0, $a0 # Not \n" ); // nor $t1, $t1, $t1
     }
 
     // cgen: this
@@ -242,17 +277,20 @@ public class CodeGenVisitor extends DepthFirstVisitor
     // cgen: Load immediate the value of n.i
     public void visit( IntegerLiteral n )
     {
-        out.println( "li $a0, " + n.i + "\n" );
+        out.println( "li $a0, " + n.i + " # IntegerLiteral " + n.i + "\n" );
     }
 
     // cgen: Load immeidate the value of "true"
     public void visit( True n )
     {
+        out.println( "li $a0, 0 # True" );
+        out.println( "nor $a0, $a0, $a0 # Not \n" ); // nor $t1, $t1, $t1
     }
 
     // cgen: Load immeidate the value of "false"
     public void visit( False n )
     {
+        out.println( "li $a0, 0 # False\n" );
     }
 
     // String s;
