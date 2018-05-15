@@ -163,6 +163,47 @@ public class CodeGenVisitor extends DepthFirstVisitor
     // cgen: i[e1] = e2
     public void visit( ArrayAssign n )
     {
+        n.e2.accept( this );
+        out.println( "sw $a0, 0($sp)" );   // push value of e1 to stack
+        out.println( "addiu $sp, $sp, -4" );
+
+        n.e1.accept( this );
+        out.println( "addi $a0, $a0, 1 # ArrayAssign" );   // index = e + 1 (length)
+        out.println( "sw $a0, 0($sp)" );     // push value to stack
+        out.println( "addiu $sp, $sp, -4" ); 
+        out.println( "lw $t1, 4($sp)" );     // $t1 = stack top
+        out.println( "li $a0, 4" );          // $a0 = 4
+        out.println( "mult $t1, $a0" );      // $a0 = stack top * 4
+        out.println( "mflo $a0" );           // 32 least significant bits of multiplication to $a0
+        out.println( "addiu $sp, $sp, 4" );  // pop
+
+        out.println( "sw $a0, 0($sp)" );     // push value to stack
+        out.println( "addiu $sp, $sp, -4" ); 
+        
+        // local variable
+        if ( currMethod.containsVar( n.i.toString() ) )
+        {
+            Variable v = currMethod.getVar( n.i.toString() );
+            out.println( "lw $a0, " + 4 * ( v.idx() + 1 ) + "($fp) # load parameter " + v.id() + "\n" );
+        }
+        else if ( currMethod.containsParam( n.i.toString() ) )
+        {
+            Variable v = currMethod.getParam( n.i.toString() );
+            out.println( "lw $a0, " + -4 * ( v.idx() + 1 ) + "($fp) # load local variable " + v.id() + "\n" );
+        }
+        else
+        {
+            System.out.println( "Cannot find " + n.i.toString() + "in method " + currMethod.getId() );
+            System.exit( -1 );
+        }
+        // static variable
+        // dynamically allocated data
+        
+        out.println( "lw $t1, 4($sp)" );     // $t1 = stack top, e1, index
+        out.println( "lw $t2, 8($sp)" );     // e2
+        out.println( "add $a0, $a0, $t1" );
+        out.println( "sw $t2, 0($a0)" );     
+        out.println( "addiu $sp, $sp, -8" ); 
     }
 
     // Exp e1,e2;
@@ -240,12 +281,35 @@ public class CodeGenVisitor extends DepthFirstVisitor
     // cgen: e1[e2]
     public void visit( ArrayLookup n )
     {
+        n.e2.accept( this );
+        out.println( "addi $a0, $a0, 1 # ArrayLookUp" );   // index = e + 1 (length)
+        out.println( "sw $a0, 0($sp)" );     // push value to stack
+        out.println( "addiu $sp, $sp, -4" ); 
+        out.println( "lw $t1, 4($sp)" );     // $t1 = stack top
+        out.println( "li $a0, 4" );          // $a0 = 4
+        out.println( "mult $t1, $a0" );      // $a0 = stack top * 4
+        out.println( "mflo $a0" );           // 32 least significant bits of multiplication to $a0
+        out.println( "addiu $sp, $sp, 4" );  // pop
+
+        out.println( "sw $a0, 0($sp)" );     // push value to stack
+        out.println( "addiu $sp, $sp, -4" ); 
+        
+
+        n.e1.accept( this );
+
+        out.println( "lw $t1, 4($sp)" );     // $t1 = stack top
+        out.println( "add $a0, $a0, $t1" );  // address + index
+        out.println( "addiu $sp, $sp, 4" );  // pop
+        out.println( "lw $a0, 0($a0)\n" );
     }
 
     // Exp e;
     // cgen: e.length
     public void visit( ArrayLength n )
     {
+        n.e.accept( this );
+        out.println( "lw $a0, 0($a0)\n" );
+        out.println( "addiu $a0, $a0, -1" ); 
     }
 
     // Exp e;
@@ -260,6 +324,45 @@ public class CodeGenVisitor extends DepthFirstVisitor
     // cgen: new int [e]
     public void visit( NewArray n )
     {
+        n.e.accept( this );
+        // li $a0, 24 # 5 elements, 4 bytes each, plus 4 bytes for length
+        out.println( "addi $a0, $a0, 1 # NewArray" );   // size + 1 (length)
+        out.println( "move $t2, $a0\n" );    // size of array
+        out.println( "sw $a0, 0($sp)" );     // push value to stack
+        out.println( "addiu $sp, $sp, -4" ); 
+        out.println( "lw $t1, 4($sp)" );     // $t1 = stack top
+        out.println( "li $a0, 4" );          // $a0 = 4
+        out.println( "mult $t1, $a0" );      // $a0 = stack top * 4
+        out.println( "mflo $a0" );           // 32 least significant bits of multiplication to $a0
+        out.println( "addiu $sp, $sp, 4" );  // pop
+        out.println( "li $v0, 9" );          // syscall with service 9 = allocate space on heap
+        out.println( "syscall" );     
+        out.println( "move $a0, $v0\n" );    // store the address of A in stack
+        
+        // set the size of the array
+        out.println( "sw $t2, 0($a0)\n" );   // set the size of the array
+
+        // initialize
+        out.println( "sw $a0, 0($sp) # initialize arrat" ); // push value to stack
+        out.println( "addiu $sp, $sp, -4" ); 
+
+        String label1 = "$Initialize" + label_count++;
+        String label2 = "$Ini_loop" + label_count++;
+        String label3 = "$exit" + label_count++;
+        out.println( label1 + ":\n" );
+        out.println( "li $t0, 1 \n"); // set the start index of for-loop
+        out.println( label2 + ":\n" );
+        out.println( "bgt $t0, $t2, " + label3 + "\n" ); // go to the branch exit if $t0 > $t2
+        out.println( "addi $a0, $a0, 4" );        // go to the address of the current element
+        out.println( "sw $zero, 0($a0)\n" );      // set the element to be 0
+        out.println( "addi $t0, $t0, 1" );        // increase the index
+        out.println( "j " + label2 );             // jump to the beginning of the loop
+
+        out.println( label3 + ":\n" );
+
+
+        out.println( "lw $a0, 4($sp)" );     // $t1 = stack top
+        out.println( "addiu $sp, $sp, 4" );  // pop
     }
 
     // Identifier i;
@@ -379,11 +482,6 @@ public class CodeGenVisitor extends DepthFirstVisitor
             "\n" +
             "jr $ra\n"
         );
-    }
-
-    void cgen( int i )
-    {
-        out.println( "li $a0, " + i );
     }
 }
 
