@@ -117,6 +117,14 @@ public class CodeGenVisitor extends DepthFirstVisitor
     // cgen: while (e) s;
     public void visit( While n )
     {
+        String label1 = "$Loop" + label_count++;
+        String label2 = "$Loop_exit" + label_count++;
+        out.println( label1 + ":\n" );
+        n.e.accept( this );
+        out.println( "beq $a0, 0, " + label2 + "\n" );
+        n.s.accept( this );
+        out.println( "j " + label1 + "\n" );
+        out.println( label2 + ":\n" );
     }
 
     // Exp e;
