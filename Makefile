@@ -49,4 +49,10 @@ test_all:
 		echo "Run $$p"; \
 		(diff $$p.rpt golden/$$p.rpt || echo "$$p failed"); \
 	done;
+	@for p in test0 test1 test2 test3 test4 test5 ; do \
+		java Main < test/$$p.java > $$p.asm; \
+		java -jar test/Mars4_5.jar nc $$p.asm > $$p-csci3120.rpt; \
+		echo "Run test/$$p"; \
+		(diff $$p-csci3120.rpt golden/$$p-csci3120.rpt || echo "test/$$p failed"); \
+	done;
 

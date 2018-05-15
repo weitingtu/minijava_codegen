@@ -259,6 +259,7 @@ public class CodeGenVisitor extends DepthFirstVisitor
     // cgen: Load the value of the variable n.s (which can be a local variable, parameter, or field)
     public void visit( IdentifierExp n )
     {
+        // local variable
         if ( currMethod.containsVar( n.s ) )
         {
             Variable v = currMethod.getVar( n.s );
@@ -274,6 +275,8 @@ public class CodeGenVisitor extends DepthFirstVisitor
             System.out.println( "Cannot find " + n.s + "in method " + currMethod.getId() );
             System.exit( -1 );
         }
+        // static variable
+        // dynamically allocated data
     }
 
     void cgen_supporting_functions()
