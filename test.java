@@ -1,27 +1,39 @@
 // Test
-//   Array (NewArray, ArrayLookup, ArrayLength)
-class test18
+//   Class and method
+class test22
 {
-    public static void main( String[] a )
+    public static void main( String[] _str )
     {
-        int [] A;
-        int x;
+        Foo f;
+        int a;
+        int b;
         {
-            A = new int [10];
-            System.out.println( A.length );
+            f = new Foo();
+            //a = f.m1();
+            b = f.m2();
 
-            A[0] = 0;
-            A[8] = 8;
-            A[9] = 9;
-            x = A[0];
-            System.out.println( x );
-            x = A[8];
-            System.out.println( x );
-            x = A[9];
-            System.out.println( x );
-            x = A[10];
-            System.out.println( x );
+            //System.out.println( a );
+            System.out.println( b );
         }
     }
+}
+
+class Foo
+{
+    public int m1()
+    {
+        int a;
+        //System.out.println( 123 );
+        //a = this.m2();
+        a = 0;
+        return a;
+    }
+
+    public int m2()
+    {
+        System.out.println( 456 );
+        return 1;
+    }
+
 }
 

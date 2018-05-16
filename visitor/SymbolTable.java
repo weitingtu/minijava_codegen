@@ -24,7 +24,7 @@ class SymbolTable
         }
         else
         {
-            hashtable.put( id, new Class( id, parent ) );
+            hashtable.put( id, new Class( id, parent, hashtable.size() ) );
         }
         return true;
     }
@@ -203,16 +203,18 @@ class Class
     Hashtable<String, Variable> fields;
     String parent;  // Superclass's name  (null if there is no superclass)
     Type type;      // An instance of Type that represents this class
+    int idx;
 
     // Model a class named "id" that extend a class name "p"
     // "p" is null if class "id" does has extend any class
-    public Class( String id, String p )
+    public Class( String id, String p, int i )
     {
         this.id = id;
         parent = p;
         type = new IdentifierType( id );
         methods = new Hashtable<String, Method>();
         fields = new Hashtable<String, Variable>();
+        idx = i;
     }
 
     public Class() {}
@@ -220,6 +222,8 @@ class Class
     public String getId() { return id; }
 
     public Type type() { return type; }
+
+    public int idx() { return idx; }
 
     // Add a method defined in the current class by registering
     // its name along with its return type.
@@ -301,6 +305,7 @@ class Class
     {
         return parent;
     }
+
 } // Class
 
 // Store all properties that describe a variable
