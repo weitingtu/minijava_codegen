@@ -168,6 +168,8 @@ public class CodeGenVisitor extends DepthFirstVisitor
         out.println( "addiu $sp, $sp, -4" );
 
         n.e1.accept( this );
+        out.println( "sw $a0, 0($sp)" );     // push e1 value to stack
+        out.println( "addiu $sp, $sp, -4" ); 
         out.println( "addi $a0, $a0, 1 # ArrayAssign" );   // index = e + 1 (length)
         out.println( "sw $a0, 0($sp)" );     // push value to stack
         out.println( "addiu $sp, $sp, -4" ); 
@@ -199,11 +201,17 @@ public class CodeGenVisitor extends DepthFirstVisitor
         // static variable
         // dynamically allocated data
         
+        out.println( "lw $t1, 8($sp)" );     // e1
+        out.println( "lw $t2, 0($a0)" );     // length
+        out.println( "addiu $t2, $t2, -1" ); 
+        out.println( "bge $t1, $t2, _array_index_out_of_bound_exception" );
+
         out.println( "lw $t1, 4($sp)" );     // $t1 = stack top, e1, index
-        out.println( "lw $t2, 8($sp)" );     // e2
+        out.println( "lw $t2, 12($sp)" );    // e2
+        
         out.println( "add $a0, $a0, $t1" );
         out.println( "sw $t2, 0($a0)" );     
-        out.println( "addiu $sp, $sp, -8" ); 
+        out.println( "addiu $sp, $sp, -12" ); 
     }
 
     // Exp e1,e2;
@@ -282,6 +290,8 @@ public class CodeGenVisitor extends DepthFirstVisitor
     public void visit( ArrayLookup n )
     {
         n.e2.accept( this );
+        out.println( "sw $a0, 0($sp)" );     // push e2 value to stack
+        out.println( "addiu $sp, $sp, -4" ); 
         out.println( "addi $a0, $a0, 1 # ArrayLookUp" );   // index = e + 1 (length)
         out.println( "sw $a0, 0($sp)" );     // push value to stack
         out.println( "addiu $sp, $sp, -4" ); 
@@ -296,10 +306,16 @@ public class CodeGenVisitor extends DepthFirstVisitor
         
 
         n.e1.accept( this );
+        
+        out.println( "lw $t1, 8($sp)" );     // e2
+        out.println( "lw $t2, 0($a0)" );     // length
+        out.println( "addiu $t2, $t2, -1" ); 
+        out.println( "bge $t1, $t2, _array_index_out_of_bound_exception" );
 
         out.println( "lw $t1, 4($sp)" );     // $t1 = stack top
         out.println( "add $a0, $a0, $t1" );  // address + index
         out.println( "addiu $sp, $sp, 4" );  // pop
+        out.println( "addiu $sp, $sp, 4" );  // pop e2
         out.println( "lw $a0, 0($a0)\n" );
     }
 

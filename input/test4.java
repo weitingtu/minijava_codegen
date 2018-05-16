@@ -5,22 +5,20 @@ class test18
     public static void main( String[] a )
     {
         int [] A;
-        int x;
         {
             A = new int [10];
             System.out.println( A.length );
 
             A[0] = 0;
-            A[8] = 8;
+            System.out.println( A[0] );
+            A[1] = 1;
+            System.out.println( A[1] );
             A[9] = 9;
-            x = A[0];
-            System.out.println( x );
-            x = A[8];
-            System.out.println( x );
-            x = A[9];
-            System.out.println( x );
-            x = A[10];
-            System.out.println( x );
+            System.out.println( A[9] );
+            A[10] = 10;
+            System.out.println( A[10] );
+            A[11] = 11;
+            System.out.println( A[11] );
         }
     }
 }
