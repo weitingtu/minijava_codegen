@@ -11,6 +11,7 @@ public class CodeGenVisitor extends DepthFirstVisitor
     static SymbolTable symbolTable;
     PrintWriter out;
     int label_count;
+    Class callClass;
 
     public CodeGenVisitor( SymbolTable s, PrintWriter out )
     {
@@ -351,6 +352,8 @@ public class CodeGenVisitor extends DepthFirstVisitor
             System.exit( -1 );
         }
         n.e.accept( this );
+
+        // set callClass here
     }
 
     // Exp e;
@@ -404,6 +407,8 @@ public class CodeGenVisitor extends DepthFirstVisitor
     public void visit( NewObject n )
     {
         Class c = symbolTable.getClass( n.i.toString() );
+        // set callClass here
+        callClass = c;
         if ( null == c )
         {
             System.out.println( "Cannot find class " + n.i.toString() );
@@ -467,6 +472,8 @@ public class CodeGenVisitor extends DepthFirstVisitor
     // cgen: this
     public void visit ( This n )
     {
+        // set callClass here
+        callClass = currClass;
     }
 
     // int i;
@@ -494,22 +501,47 @@ public class CodeGenVisitor extends DepthFirstVisitor
     public void visit( IdentifierExp n )
     {
         // local variable
+        Variable v = null;
         if ( currMethod.containsParam( n.s ) )
         {
-            Variable v = currMethod.getParam( n.s );
+            v = currMethod.getParam( n.s );
             out.println( "lw $a0, " + 4 * ( v.idx() + 1 ) + "($fp) # load parameter " + v.id() + "\n" );
+
         }
         else if ( currMethod.containsVar( n.s ) )
         {
-            Variable v = currMethod.getVar( n.s );
+            v = currMethod.getVar( n.s );
             out.println( "lw $a0, " + -4 * ( v.idx() + 1 ) + "($fp) # load local variable " + v.id() + "\n" );
+        }
+        else if ( currClass.containsVar( n.s ) )
+        {
+            v = currClass.getVar( n.s );
+            //out.println( "lw $a0, " + -4 * ( v.idx() + 1 ) + "($fp) # load local variable " + v.id() + "\n" );
+            System.out.println( "Doesn't support var " + n.s + "in class " + currClass.getId() );
+            System.exit( -1 );
         }
         else
         {
             System.out.println( "Cannot find " + n.s + "in method " + currMethod.getId() );
             System.exit( -1 );
         }
-        // dynamically allocated data
+        // dynamically allocated data, object data
+        // set callClass here
+        Type type = v.type();
+        if ( type instanceof IdentifierType )
+        {
+            IdentifierType id_type = ( IdentifierType ) type;
+            if ( ! symbolTable.containsClass( id_type.s ) )
+            {
+                System.out.println( "Cannnot find class " + id_type.s );
+                System.exit( -1 );
+            }
+            callClass = symbolTable.getClass( id_type.s );
+        }
+        else
+        {
+            callClass = null;
+        }
     }
 
     void cgen_supporting_functions()
