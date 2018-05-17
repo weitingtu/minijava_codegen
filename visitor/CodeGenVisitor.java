@@ -178,6 +178,16 @@ public class CodeGenVisitor extends DepthFirstVisitor
             Variable v = currMethod.getVar( n.i.toString() );
             out.println( "sw $a0, " + -4 * ( v.idx() + 1 ) + "($fp) # save local variable " + v.id() + "\n" );
         }
+        else if ( currClass.containsVar( n.i.toString() ) )
+        {
+            Variable v = currClass.getVar( n.i.toString() );
+            out.println( "lw $t0, " + 4 * ( currMethod.params.size() + 1 ) + "($fp) # load this" );
+            out.println( "sw $a0, " + 4 * ( v.idx() + 3 ) + "($t0) # save object variable " + v.id() + "\n" );
+            //Variable v = currClass.getVar( n.i.toString() );
+            //out.println( "lw $a0, " + -4 * ( v.idx() + 1 ) + "($fp) # load local variable " + v.id() + "\n" );
+            //System.out.println( "Doesn't support var " + n.i.toString() + " in class " + currClass.getId() );
+            //System.exit( -1 );
+        }
         else
         {
             System.out.println( "Cannot find " + n.i.toString() + " in method " + currMethod.getId() );
@@ -219,6 +229,16 @@ public class CodeGenVisitor extends DepthFirstVisitor
         {
             Variable v = currMethod.getVar( n.i.toString() );
             out.println( "lw $a0, " + -4 * ( v.idx() + 1 ) + "($fp) # load local variable " + v.id() + "\n" );
+        }
+        else if ( currClass.containsVar( n.i.toString() ) )
+        {
+            Variable v = currClass.getVar( n.i.toString() );
+            out.println( "lw $a0, " + 4 * ( currMethod.params.size() + 1 ) + "($fp) # load this" );
+            out.println( "lw $a0, " + 4 * ( v.idx() + 3 ) + "($a0) # load object variable " + v.id() + "\n" );
+            //Variable v = currClass.getVar( n.i.toString() );
+            //out.println( "lw $a0, " + -4 * ( v.idx() + 1 ) + "($fp) # load local variable " + v.id() + "\n" );
+            //System.out.println( "Doesn't support var " + n.i.toString() + " in class " + currClass.getId() );
+            //System.exit( -1 );
         }
         else
         {
@@ -469,14 +489,14 @@ public class CodeGenVisitor extends DepthFirstVisitor
         }
 
         // initialize
-        out.println( "sw $a0, 0($sp) # NewObject" ); // push value to stack
-        out.println( "addiu $sp, $sp, -4" );
-
         int size = get_object_size( n.i.toString() );
-        out.println( "li $a0, " + size * 4 ); // size * 4 bytes
-        out.println( "li $v0, 9" );          // syscall with service 9 = allocate space on heap
+        out.println( "li $a0, " + size * 4 + " # NewObject" ); // size * 4 bytes
+        out.println( "li $v0, 9" );           // syscall with service 9 = allocate space on heap
         out.println( "syscall" );
-        out.println( "move $a0, $v0\n" );    // store the address of A in stack
+        out.println( "move $a0, $v0\n" );     // store the address of A in stack
+
+        out.println( "sw $a0, 0($sp)" );      // push value to stack
+        out.println( "addiu $sp, $sp, -4" );
 
         out.println( "li $t0, " + c.idx() );  // class idx
         out.println( "sw $t0, 0($a0)\n" );    // set the class idx of the array
@@ -570,9 +590,10 @@ public class CodeGenVisitor extends DepthFirstVisitor
         else if ( currClass.containsVar( n.s ) )
         {
             v = currClass.getVar( n.s );
-            //out.println( "lw $a0, " + -4 * ( v.idx() + 1 ) + "($fp) # load local variable " + v.id() + "\n" );
-            System.out.println( "Doesn't support var " + n.s + "in class " + currClass.getId() );
-            System.exit( -1 );
+            out.println( "lw $a0, " + 4 * ( currMethod.params.size() + 1 ) + "($fp) # load this" );
+            out.println( "lw $a0, " + 4 * ( v.idx() + 3 ) + "($a0) # load object variable " + v.id() + "\n" );
+            //System.out.println( "Doesn't support var " + n.s + " in class " + currClass.getId() );
+            //System.exit( -1 );
         }
         else
         {
