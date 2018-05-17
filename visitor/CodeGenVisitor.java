@@ -192,10 +192,6 @@ public class CodeGenVisitor extends DepthFirstVisitor
             System.out.println( "Cannot find " + n.i.toString() + " in method " + currMethod.getId() );
             System.exit( -1 );
         }
-        if ( ( v.type() instanceof IdentifierType ) || ( v.type() instanceof IntArrayType ) )
-        {
-            out.println( "beq  $a0, $zero, _null_pointer_exception\n" );
-        }
     }
 
     // Identifier i;
