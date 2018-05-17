@@ -205,11 +205,15 @@ public class CodeGenVisitor extends DepthFirstVisitor
             v = currMethod.getVar( n.i.toString() );
             out.println( "sw $a0, " + -4 * ( v.idx() + 1 ) + "($fp) # save local variable " + v.id() + "\n" );
         }
-        else if ( currClass.containsVar( n.i.toString() ) )
+        //else if ( currClass.containsVar( n.i.toString() ) )
+        else if ( contains_var( currClass, n.i.toString() ) )
         {
-            v = currClass.getVar( n.i.toString() );
+            //v = currClass.getVar( n.i.toString() );
+            v = get_var( currClass, n.i.toString() );
             out.println( "lw $t0, " + 4 * ( currMethod.params.size() + 1 ) + "($fp) # load this" );
-            out.println( "sw $a0, " + 4 * ( v.idx() + 3 ) + "($t0) # save object variable " + v.id() + "\n" );
+            //out.println( "sw $a0, " + 4 * ( v.idx() + 3 ) + "($t0) # save object variable " + v.id() + "\n" );
+            int idx = get_var_index( currClass, n.i.toString() );
+            out.println( "sw $a0, " + 4 * ( idx ) + "($t0) # save object variable " + v.id() + "\n" );
         }
         else
         {
@@ -254,11 +258,15 @@ public class CodeGenVisitor extends DepthFirstVisitor
             v = currMethod.getVar( n.i.toString() );
             out.println( "lw $a0, " + -4 * ( v.idx() + 1 ) + "($fp) # load local variable " + v.id() + "\n" );
         }
-        else if ( currClass.containsVar( n.i.toString() ) )
+        //else if ( currClass.containsVar( n.i.toString() ) )
+        else if ( contains_var( currClass, n.i.toString() ) )
         {
-            v = currClass.getVar( n.i.toString() );
+            //v = currClass.getVar( n.i.toString() );
+            v = get_var( currClass, n.i.toString() );
             out.println( "lw $a0, " + 4 * ( currMethod.params.size() + 1 ) + "($fp) # load this" );
-            out.println( "lw $a0, " + 4 * ( v.idx() + 3 ) + "($a0) # load object variable " + v.id() + "\n" );
+            //out.println( "lw $a0, " + 4 * ( v.idx() + 3 ) + "($a0) # load object variable " + v.id() + "\n" );
+            int idx = get_var_index( currClass, n.i.toString() );
+            out.println( "lw $a0, " + 4 * ( idx ) + "($a0) # load object variable " + v.id() + "\n" );
         }
         else
         {
@@ -646,11 +654,15 @@ public class CodeGenVisitor extends DepthFirstVisitor
             v = currMethod.getVar( n.s );
             out.println( "lw $a0, " + -4 * ( v.idx() + 1 ) + "($fp) # load local variable " + v.id() + "\n" );
         }
-        else if ( currClass.containsVar( n.s ) )
+        //else if ( currClass.containsVar( n.s ) )
+        else if ( contains_var( currClass, n.s ) )
         {
-            v = currClass.getVar( n.s );
+            //v = currClass.getVar( n.s );
+            v = get_var( currClass, n.s );
             out.println( "lw $a0, " + 4 * ( currMethod.params.size() + 1 ) + "($fp) # load this" );
-            out.println( "lw $a0, " + 4 * ( v.idx() + 3 ) + "($a0) # load object variable " + v.id() + "\n" );
+            //out.println( "lw $a0, " + 4 * ( v.idx() + 3 ) + "($a0) # load object variable " + v.id() + "\n" );
+            int idx = get_var_index( currClass, n.s );
+            out.println( "lw $a0, " + 4 * ( idx ) + "($a0) # load object variable " + v.id() + "\n" );
         }
         else
         {
@@ -748,18 +760,23 @@ public class CodeGenVisitor extends DepthFirstVisitor
         return field_size + 3;
     }
 
-    /*int get_var_index( Class c, String s )
+    int get_var_index( Class c, String s )
     {
         boolean found = false;
         int field_size = 0;
         int idx = 0;
         while ( c != null )
         {
-            if( c.containsVar( s ) )
+            if( found )
+            {
+                field_size += c.fields.size();
+            }
+            if( !found && c.containsVar( s ) )
             {
                 Variable v = c.getVar( s );
+                idx = v.idx();
+                found = true;
             }
-            field_size += c.fields.size();
             if ( null == c.parent() )
             {
                 c = null;
@@ -774,8 +791,51 @@ public class CodeGenVisitor extends DepthFirstVisitor
         // Dispatch Ptr
         // Attribute 1
         // Attribute 2 ...
-        return field_size + 3;
-    }*/
+        return field_size + idx + 3;
+    }
+
+    Variable get_var( Class c, String s )
+    {
+        Variable v = null;
+        while ( c != null )
+        {
+            if( c.containsVar( s ) )
+            {
+                v = c.getVar( s );
+                break;
+            }
+
+            if ( null == c.parent() )
+            {
+                c = null;
+            }
+            else
+            {
+                c = symbolTable.getClass( c.parent() );
+            }
+        }
+        return v;
+    }
+
+    boolean contains_var(Class c, String s)
+    {
+        while ( c != null )
+        {
+            if( c.containsVar( s ) )
+            {
+                return true;
+            }
+            if ( null == c.parent() )
+            {
+                c = null;
+            }
+            else
+            {
+                c = symbolTable.getClass( c.parent() );
+            }
+        }
+        return false;
+    }
 
     String get_function_label( String class_name, String method_name )
     {
