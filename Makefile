@@ -29,6 +29,7 @@ $(PARSER): $(JAVACC_FILE)
 	javac $(JAVAC_OPTIONS) $(JAVACC_OUTDIR)/*.java
 
 clean:
+	rm -f *.rpt
 	rm -rf $(JAVACC_OUTDIR) *.class
 	rm -f syntaxtree/*.class visitor/*.class
 
@@ -54,5 +55,7 @@ test_all:
 		java -jar test/Mars4_5.jar nc $$p.asm > $$p-csci3120.rpt; \
 		echo "Run test/$$p"; \
 		(diff $$p-csci3120.rpt golden/$$p-csci3120.rpt || echo "test/$$p failed"); \
-	done;
+	done; 
+	rm -f *.rpt
+	rm -f *.asm
 
