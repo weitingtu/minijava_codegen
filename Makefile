@@ -43,7 +43,7 @@ test1: test.java
 
 test_all: 
 	rm -f *.rpt
-	@for p in test1 test2 test3 test4 test5 test6; do \
+	@for p in test1 test2 test3 test4 test5 test6 test7; do \
 		java Main < input/$$p.java > $$p.asm; \
 		java -jar test/Mars4_5.jar nc $$p.asm > $$p.rpt; \
 		echo "Run $$p"; \

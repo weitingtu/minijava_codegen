@@ -387,7 +387,6 @@ public class CodeGenVisitor extends DepthFirstVisitor
             System.out.println( "Call class is null when call method " + n.i.toString() );
             System.exit( -1 );
         }
-        currClass = callClass;
 
         String id = n.i.toString();
         if ( !callClass.containsMethod( id ) )
@@ -395,7 +394,8 @@ public class CodeGenVisitor extends DepthFirstVisitor
             System.out.println( "Cannot find " + id + " in class " + callClass.getId() );
             System.exit( -1 );
         }
-        currMethod = callClass.getMethod( id );
+        Class  callClass2 = callClass; // backup callClass since callClass may change when evaluate parameters
+        Method callMethod = callClass.getMethod( id );
 
         // frame layout
         // old fp
@@ -406,16 +406,18 @@ public class CodeGenVisitor extends DepthFirstVisitor
         out.println( "sw $fp, 0($sp) # push $fp, Call class " + callClass.getId() + " method " + currMethod.getId() ); // push $fp
         out.println( "addiu $sp, $sp, -4");
         out.println( "sw $a0, 0($sp) # push This " );
-        out.println( "addiu $sp, $sp, -4" );
+        out.println( "addiu $sp, $sp, -4\n" );
 
         // set parameter
-        for ( int i = 0; i < n.el.size(); i++ )
+        for ( int i = n.el.size() - 1; i >= 0; i-- )
         {
              n.el.elementAt( i ).accept( this );
              out.println( "sw $a0, 0($sp) # push e" + i );
-             out.println( "addiu $sp, $sp, -4" );
+             out.println( "addiu $sp, $sp, -4\n" );
         }
 
+        currClass  = callClass2;
+        currMethod = callMethod;
         // call body
         String label = get_function_label( currClass.getId(), currMethod.getId() );
         out.println( "jal " + label + "\n" );
