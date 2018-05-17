@@ -99,9 +99,10 @@ public class CodeGenVisitor extends DepthFirstVisitor
         currMethod = currClass.getMethod( id );
         String label = get_function_label( currClass.getId(), currMethod.getId() );
         out.println( label + ":\n" );
-        out.println( "move $fp, $sp");
-        out.println( "sw $ra, 0($sp)" ); // push $ra
+        out.println( "move $fp, $sp" );
+        out.println( "sw $ra, 0($sp) # push $ra" ); // push $ra
         out.println( "addiu $sp, $sp, -4" );
+        out.println( "addiu $sp, $sp, " + -4 * ( currMethod.getVarSize() + 2 ) + "\n" );
 
         for ( int i = 0; i < n.sl.size(); i++ )
         {
@@ -109,11 +110,12 @@ public class CodeGenVisitor extends DepthFirstVisitor
         }
         n.e.accept( this );
         // handle return value
-        out.println( "move $v0, $a0 # save return value");
+        out.println( "move $v0, $a0 # save return value" );
 
-        out.println( "lw $ra, 4($sp)" ); // restore $ra 
+        out.println( "addiu $sp, $sp, " + 4 * ( currMethod.getVarSize() + 2 ) + "\n" );
+        out.println( "lw $ra, 4($sp) # restore $ra" ); // restore $ra
         out.println( "addiu $sp, $sp, " + ( currMethod.params.size() * 4 + 12 ) );
-        out.println( "lw $fp, 0($sp)" ); // restore $fp
+        out.println( "lw $fp, 0($sp) # restore $fp" ); // restore $fp
         out.println( "jr $ra" );
     }
 
@@ -201,7 +203,7 @@ public class CodeGenVisitor extends DepthFirstVisitor
     public void visit( ArrayAssign n )
     {
         n.e2.accept( this );
-        out.println( "sw $a0, 0($sp)" );   // push value of e1 to stack
+        out.println( "sw $a0, 0($sp)" );   // push value of e2 to stack
         out.println( "addiu $sp, $sp, -4" );
 
         n.e1.accept( this );
@@ -257,7 +259,7 @@ public class CodeGenVisitor extends DepthFirstVisitor
 
         out.println( "add $a0, $a0, $t1" );
         out.println( "sw $t2, 0($a0)" );
-        out.println( "addiu $sp, $sp, -12" );
+        out.println( "addiu $sp, $sp, 12" );
     }
 
     // Exp e1,e2;
@@ -403,17 +405,18 @@ public class CodeGenVisitor extends DepthFirstVisitor
         // en
         // e...
         // e1
-        out.println( "sw $fp, 0($sp) # push $fp, Call class " + callClass.getId() + " method " + currMethod.getId() ); // push $fp
-        out.println( "addiu $sp, $sp, -4");
+        out.println( "sw $fp, 0($sp) # push $fp, Call class " + callClass.getId() + " method " +
+                     currMethod.getId() ); // push $fp
+        out.println( "addiu $sp, $sp, -4" );
         out.println( "sw $a0, 0($sp) # push This " );
         out.println( "addiu $sp, $sp, -4\n" );
 
         // set parameter
         for ( int i = n.el.size() - 1; i >= 0; i-- )
         {
-             n.el.elementAt( i ).accept( this );
-             out.println( "sw $a0, 0($sp) # push e" + i );
-             out.println( "addiu $sp, $sp, -4\n" );
+            n.el.elementAt( i ).accept( this );
+            out.println( "sw $a0, 0($sp) # push e" + i );
+            out.println( "addiu $sp, $sp, -4\n" );
         }
 
         currClass  = callClass2;
@@ -423,7 +426,7 @@ public class CodeGenVisitor extends DepthFirstVisitor
         out.println( "jal " + label + "\n" );
 
         // handle return value
-        out.println( "move $a0, $v0 # load return value");
+        out.println( "move $a0, $v0 # load return value" );
         // set callClass from return type
         set_call_class( currMethod.type() );
 
@@ -692,7 +695,7 @@ public class CodeGenVisitor extends DepthFirstVisitor
         // Attribute 2 ...
         return field_size + 3;
     }
-    
+
     String get_function_label( String class_name, String method_name )
     {
         return class_name + "_" + method_name + "_f_entry";
@@ -700,7 +703,7 @@ public class CodeGenVisitor extends DepthFirstVisitor
 
     void set_call_class( Type type )
     {
-        if ( ! (type instanceof IdentifierType ) )
+        if ( ! ( type instanceof IdentifierType ) )
         {
             callClass = null;
             return;

@@ -1,34 +1,43 @@
 // Test
-//   Instantiation of a class and invoking a method
-class test21
+//   Passing array via parameter
+//   Returning an array from a method
+class test27
 {
-    public static void main( String[] _str )
+    public static void main( String[] args )
     {
-        Foo f;
-        int x;
-        int y;
+        Foo foo;
+        int [] B;
+        int i;
         {
-            x = 15;
-            y = 255;
-            System.out.println( ( new Foo() ).f( x, y ) );
+            foo = new Foo();
+            B = new int [10];
+            i = 0;
+            while ( i < B.length )
+            {
+                B[i] = i + 1;
+                i = i + 1;
+            }
+
+            System.out.println( foo.bar( B )[1] );
+            System.out.println( foo.bar( B )[4] );
         }
     }
 }
 
 class Foo
 {
-    int a;
-    int b;
-    public int f(int x, int y)
+
+    public int [] bar( int [] A )
     {
-        System.out.println( x );
-        System.out.println( y );
-        a = x;
-        b = y;
-        System.out.println( a );
-        System.out.println( b );
-        return a;
+        int i;
+
+        i = 0;
+        while ( i < A.length )
+        {
+            A[i] = A[i] * 2;
+            i = i + 1;
+        }
+
+        return A;
     }
 }
-
-
