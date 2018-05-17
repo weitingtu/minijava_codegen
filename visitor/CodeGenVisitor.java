@@ -129,7 +129,10 @@ public class CodeGenVisitor extends DepthFirstVisitor
         String label2 = "$L" + label_count++;
 
         // beq  $2,$0,$L2
-        out.println( "beq $a0, 0, " + label1 + "\n" );
+        out.println( "li $t0, 0x0001" );
+        out.println( "and $t0, $t0, $a0" );
+        out.println( "beq $t0, 0, " + label1 + "\n" );
+
         n.s1.accept( this );
         out.println( "j " + label2 + "\n" );
 
@@ -562,8 +565,9 @@ public class CodeGenVisitor extends DepthFirstVisitor
     // cgen: Load immeidate the value of "true"
     public void visit( True n )
     {
-        out.println( "li $a0, 0 # True" );
-        out.println( "nor $a0, $a0, $a0 # Not \n" ); // nor $t1, $t1, $t1
+        out.println( "li $a0, 1 # True" );
+        //out.println( "li $a0, 0 # True" );
+        //out.println( "nor $a0, $a0, $a0 # Not \n" ); // nor $t1, $t1, $t1
     }
 
     // cgen: Load immeidate the value of "false"
