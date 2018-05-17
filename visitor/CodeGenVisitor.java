@@ -153,7 +153,9 @@ public class CodeGenVisitor extends DepthFirstVisitor
         String label2 = "$Loop_exit" + label_count++;
         out.println( label1 + ":\n" );
         n.e.accept( this );
-        out.println( "beq $a0, 0, " + label2 + "\n" );
+        out.println( "li $t0, 0x0001" );
+        out.println( "and $t0, $t0, $a0" );
+        out.println( "beq $t0, 0, " + label2 + "\n" );
         n.s.accept( this );
         out.println( "j " + label1 + "\n" );
         out.println( label2 + ":\n" );
@@ -380,6 +382,10 @@ public class CodeGenVisitor extends DepthFirstVisitor
     // cgen: e.i(el)
     public void visit( Call n )
     {
+        // new Foo().f()
+        // foo.f1().f2()
+        // foo.f1()
+        // this.f1()
         n.e.accept( this );
 
         Class  prevClass  = currClass;
