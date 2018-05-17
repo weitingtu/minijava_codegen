@@ -205,13 +205,10 @@ public class CodeGenVisitor extends DepthFirstVisitor
             v = currMethod.getVar( n.i.toString() );
             out.println( "sw $a0, " + -4 * ( v.idx() + 1 ) + "($fp) # save local variable " + v.id() + "\n" );
         }
-        //else if ( currClass.containsVar( n.i.toString() ) )
         else if ( contains_var( currClass, n.i.toString() ) )
         {
-            //v = currClass.getVar( n.i.toString() );
             v = get_var( currClass, n.i.toString() );
             out.println( "lw $t0, " + 4 * ( currMethod.params.size() + 1 ) + "($fp) # load this" );
-            //out.println( "sw $a0, " + 4 * ( v.idx() + 3 ) + "($t0) # save object variable " + v.id() + "\n" );
             int idx = get_var_index( currClass, n.i.toString() );
             out.println( "sw $a0, " + 4 * ( idx ) + "($t0) # save object variable " + v.id() + "\n" );
         }
@@ -258,13 +255,10 @@ public class CodeGenVisitor extends DepthFirstVisitor
             v = currMethod.getVar( n.i.toString() );
             out.println( "lw $a0, " + -4 * ( v.idx() + 1 ) + "($fp) # load local variable " + v.id() + "\n" );
         }
-        //else if ( currClass.containsVar( n.i.toString() ) )
         else if ( contains_var( currClass, n.i.toString() ) )
         {
-            //v = currClass.getVar( n.i.toString() );
             v = get_var( currClass, n.i.toString() );
             out.println( "lw $a0, " + 4 * ( currMethod.params.size() + 1 ) + "($fp) # load this" );
-            //out.println( "lw $a0, " + 4 * ( v.idx() + 3 ) + "($a0) # load object variable " + v.id() + "\n" );
             int idx = get_var_index( currClass, n.i.toString() );
             out.println( "lw $a0, " + 4 * ( idx ) + "($a0) # load object variable " + v.id() + "\n" );
         }
@@ -424,13 +418,7 @@ public class CodeGenVisitor extends DepthFirstVisitor
         }
 
         String id = n.i.toString();
-        /*if ( !callClass.containsMethod( id ) )
-        {
-            System.out.println( "Cannot find method " + id + " in class " + callClass.getId() );
-            System.exit( -1 );
-        }*/
         Class  callClass2 = callClass; // backup callClass since callClass may change when evaluate parameters
-        //Method callMethod = callClass.getMethod( id );
         Method callMethod = null;
 
         Class c = callClass2; // method class
@@ -627,8 +615,6 @@ public class CodeGenVisitor extends DepthFirstVisitor
     public void visit( True n )
     {
         out.println( "li $a0, 1 # True" );
-        //out.println( "li $a0, 0 # True" );
-        //out.println( "nor $a0, $a0, $a0 # Not \n" ); // nor $t1, $t1, $t1
     }
 
     // cgen: Load immeidate the value of "false"
@@ -654,13 +640,10 @@ public class CodeGenVisitor extends DepthFirstVisitor
             v = currMethod.getVar( n.s );
             out.println( "lw $a0, " + -4 * ( v.idx() + 1 ) + "($fp) # load local variable " + v.id() + "\n" );
         }
-        //else if ( currClass.containsVar( n.s ) )
         else if ( contains_var( currClass, n.s ) )
         {
-            //v = currClass.getVar( n.s );
             v = get_var( currClass, n.s );
             out.println( "lw $a0, " + 4 * ( currMethod.params.size() + 1 ) + "($fp) # load this" );
-            //out.println( "lw $a0, " + 4 * ( v.idx() + 3 ) + "($a0) # load object variable " + v.id() + "\n" );
             int idx = get_var_index( currClass, n.s );
             out.println( "lw $a0, " + 4 * ( idx ) + "($a0) # load object variable " + v.id() + "\n" );
         }
