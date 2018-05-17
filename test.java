@@ -1,39 +1,22 @@
 // Test
-//   Class and method
-class test22
+//   Instantiation of a class and invoking a method
+class test21
 {
     public static void main( String[] _str )
     {
         Foo f;
-        int a;
-        int b;
         {
-            f = new Foo();
-            //a = f.m1();
-            b = f.m2();
-
-            //System.out.println( a );
-            System.out.println( b );
+            System.out.println( ( new Foo() ).f() );
         }
     }
 }
 
 class Foo
 {
-    public int m1()
+    public int f()
     {
-        int a;
-        //System.out.println( 123 );
-        //a = this.m2();
-        a = 0;
-        return a;
+        return 999;
     }
-
-    public int m2()
-    {
-        System.out.println( 456 );
-        return 1;
-    }
-
 }
+
 

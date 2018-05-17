@@ -18,6 +18,7 @@ public class CodeGenVisitor extends DepthFirstVisitor
         symbolTable = s;
         this.out = out;
         this.label_count = 0;
+        this.callClass = null;
     }
 
     // MainClass m;
@@ -67,7 +68,7 @@ public class CodeGenVisitor extends DepthFirstVisitor
 
         // Generate code to reserve space for local variables in stack
         out.println( "move $fp, $sp" );
-        out.println( "addiu $sp, $sp, " + -4 * ( currMethod.getVarSize() + 1 ) + "\n" );
+        out.println( "addiu $sp, $sp, " + -4 * ( currMethod.getVarSize() + 2 ) + "\n" );
         // Optionally, generate code to reserve space for temps
 
         n.s.accept( this );
@@ -96,13 +97,24 @@ public class CodeGenVisitor extends DepthFirstVisitor
     {
         String id = n.i.toString();
         currMethod = currClass.getMethod( id );
-        String label = currClass.getId() + "_" + currMethod.getId() + "_f_entry";
+        String label = get_function_label( currClass.getId(), currMethod.getId() );
         out.println( label + ":\n" );
+        out.println( "move $fp, $sp");
+        out.println( "sw $ra, 0($sp)" ); // push $ra
+        out.println( "addiu $sp, $sp, -4" );
 
         for ( int i = 0; i < n.sl.size(); i++ )
         {
             n.sl.elementAt( i ).accept( this );
         }
+        n.e.accept( this );
+        // handle return value
+        out.println( "move $v0, $a0 # save return value");
+
+        out.println( "lw $ra, 4($sp)" ); // restore $ra 
+        out.println( "addiu $sp, $sp, " + ( currMethod.params.size() * 4 + 12 ) );
+        out.println( "lw $fp, 0($sp)" ); // restore $fp
+        out.println( "jr $ra" );
     }
 
     // Exp e;
@@ -168,7 +180,7 @@ public class CodeGenVisitor extends DepthFirstVisitor
         }
         else
         {
-            System.out.println( "Cannot find " + n.i.toString() + "in method " + currMethod.getId() );
+            System.out.println( "Cannot find " + n.i.toString() + " in method " + currMethod.getId() );
             System.exit( -1 );
         }
     }
@@ -210,7 +222,7 @@ public class CodeGenVisitor extends DepthFirstVisitor
         }
         else
         {
-            System.out.println( "Cannot find " + n.i.toString() + "in method " + currMethod.getId() );
+            System.out.println( "Cannot find " + n.i.toString() + " in method " + currMethod.getId() );
             System.exit( -1 );
         }
         // static variable
@@ -346,14 +358,55 @@ public class CodeGenVisitor extends DepthFirstVisitor
     // cgen: e.i(el)
     public void visit( Call n )
     {
-        if ( ! ( n.e instanceof IdentifierExp ) )
-        {
-            System.out.println( "Call n.e is not IdentifierExp" );
-            System.exit( -1 );
-        }
         n.e.accept( this );
 
-        // set callClass here
+        Class  prevClass  = currClass;
+        Method prevMethod = currMethod;
+        if ( null == callClass )
+        {
+            System.out.println( "Call class is null when call method " + n.i.toString() );
+            System.exit( -1 );
+        }
+        currClass = callClass;
+
+        String id = n.i.toString();
+        if ( !callClass.containsMethod( id ) )
+        {
+            System.out.println( "Cannot find " + id + " in class " + callClass.getId() );
+            System.exit( -1 );
+        }
+        currMethod = callClass.getMethod( id );
+
+        // frame layout
+        // old fp
+        // this
+        // en
+        // e...
+        // e1
+        out.println( "sw $fp, 0($sp) # push $fp, Call class " + callClass.getId() + " method " + currMethod.getId() ); // push $fp
+        out.println( "addiu $sp, $sp, -4");
+        out.println( "sw $a0, 0($sp) # push This " );
+        out.println( "addiu $sp, $sp, -4" );
+
+        // set parameter
+        for ( int i = 0; i < n.el.size(); i++ )
+        {
+             n.el.elementAt( i ).accept( this );
+             out.println( "sw $a0, 0($sp) # push e" + i );
+             out.println( "addiu $sp, $sp, -4" );
+        }
+
+        // call body
+        String label = get_function_label( currClass.getId(), currMethod.getId() );
+        out.println( "jal " + label + "\n" );
+
+        // handle return value
+        out.println( "move $a0, $v0 # load return value");
+        // set callClass from return type
+        set_call_class( currMethod.type() );
+
+        currMethod = prevMethod;
+        currClass  = prevClass;
     }
 
     // Exp e;
@@ -470,10 +523,11 @@ public class CodeGenVisitor extends DepthFirstVisitor
     }
 
     // cgen: this
-    public void visit ( This n )
+    public void visit( This n )
     {
         // set callClass here
         callClass = currClass;
+        out.println( "lw $a0, " + 4 * ( currMethod.params.size() + 1 ) + "($fp) # load this\n" );
     }
 
     // int i;
@@ -522,26 +576,12 @@ public class CodeGenVisitor extends DepthFirstVisitor
         }
         else
         {
-            System.out.println( "Cannot find " + n.s + "in method " + currMethod.getId() );
+            System.out.println( "Cannot find " + n.s + " in method " + currMethod.getId() );
             System.exit( -1 );
         }
         // dynamically allocated data, object data
         // set callClass here
-        Type type = v.type();
-        if ( type instanceof IdentifierType )
-        {
-            IdentifierType id_type = ( IdentifierType ) type;
-            if ( ! symbolTable.containsClass( id_type.s ) )
-            {
-                System.out.println( "Cannnot find class " + id_type.s );
-                System.exit( -1 );
-            }
-            callClass = symbolTable.getClass( id_type.s );
-        }
-        else
-        {
-            callClass = null;
-        }
+        set_call_class( v.type() );
     }
 
     void cgen_supporting_functions()
@@ -628,6 +668,28 @@ public class CodeGenVisitor extends DepthFirstVisitor
         // Attribute 1
         // Attribute 2 ...
         return field_size + 3;
+    }
+    
+    String get_function_label( String class_name, String method_name )
+    {
+        return class_name + "_" + method_name + "_f_entry";
+    }
+
+    void set_call_class( Type type )
+    {
+        if ( ! (type instanceof IdentifierType ) )
+        {
+            callClass = null;
+            return;
+        }
+
+        IdentifierType id_type = ( IdentifierType ) type;
+        if ( ! symbolTable.containsClass( id_type.s ) )
+        {
+            System.out.println( "Cannnot find class " + id_type.s );
+            System.exit( -1 );
+        }
+        callClass = symbolTable.getClass( id_type.s );
     }
 }
 
