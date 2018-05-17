@@ -9,12 +9,12 @@ class test23
         int [] A;
         {
             //A = new int [10];
-            //A[0] = 1000;
+            A[0] = 1000;
             //A[2] = 2000;
-            f = new Foo();
+            //f = new Foo();
             //a = 5;
             //System.out.println( a );
-            a = f.m1( A );
+            //a = f.m1( A );
             //System.out.println( a );
         }
     }

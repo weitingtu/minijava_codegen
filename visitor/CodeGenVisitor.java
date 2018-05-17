@@ -170,30 +170,31 @@ public class CodeGenVisitor extends DepthFirstVisitor
     public void visit( Assign n )
     {
         n.e.accept( this );
+        Variable v = null;
         if ( currMethod.containsParam( n.i.toString() ) )
         {
-            Variable v = currMethod.getParam( n.i.toString() );
+            v = currMethod.getParam( n.i.toString() );
             out.println( "sw $a0, " + 4 * ( v.idx() + 1 ) + "($fp) # save parameter " + v.id() + "\n" );
         }
         else if ( currMethod.containsVar( n.i.toString() ) )
         {
-            Variable v = currMethod.getVar( n.i.toString() );
+            v = currMethod.getVar( n.i.toString() );
             out.println( "sw $a0, " + -4 * ( v.idx() + 1 ) + "($fp) # save local variable " + v.id() + "\n" );
         }
         else if ( currClass.containsVar( n.i.toString() ) )
         {
-            Variable v = currClass.getVar( n.i.toString() );
+            v = currClass.getVar( n.i.toString() );
             out.println( "lw $t0, " + 4 * ( currMethod.params.size() + 1 ) + "($fp) # load this" );
             out.println( "sw $a0, " + 4 * ( v.idx() + 3 ) + "($t0) # save object variable " + v.id() + "\n" );
-            //Variable v = currClass.getVar( n.i.toString() );
-            //out.println( "lw $a0, " + -4 * ( v.idx() + 1 ) + "($fp) # load local variable " + v.id() + "\n" );
-            //System.out.println( "Doesn't support var " + n.i.toString() + " in class " + currClass.getId() );
-            //System.exit( -1 );
         }
         else
         {
             System.out.println( "Cannot find " + n.i.toString() + " in method " + currMethod.getId() );
             System.exit( -1 );
+        }
+        if ( ( v.type() instanceof IdentifierType ) || ( v.type() instanceof IntArrayType ) )
+        {
+            out.println( "beq  $a0, $zero, _null_pointer_exception\n" );
         }
     }
 
@@ -222,33 +223,33 @@ public class CodeGenVisitor extends DepthFirstVisitor
         out.println( "addiu $sp, $sp, -4" );
 
         // local variable
+        Variable v = null;
         if ( currMethod.containsParam( n.i.toString() ) )
         {
-            Variable v = currMethod.getParam( n.i.toString() );
+            v = currMethod.getParam( n.i.toString() );
             out.println( "lw $a0, " + 4 * ( v.idx() + 1 ) + "($fp) # load parameter " + v.id() + "\n" );
         }
         else if ( currMethod.containsVar( n.i.toString() ) )
         {
-            Variable v = currMethod.getVar( n.i.toString() );
+            v = currMethod.getVar( n.i.toString() );
             out.println( "lw $a0, " + -4 * ( v.idx() + 1 ) + "($fp) # load local variable " + v.id() + "\n" );
         }
         else if ( currClass.containsVar( n.i.toString() ) )
         {
-            Variable v = currClass.getVar( n.i.toString() );
+            v = currClass.getVar( n.i.toString() );
             out.println( "lw $a0, " + 4 * ( currMethod.params.size() + 1 ) + "($fp) # load this" );
             out.println( "lw $a0, " + 4 * ( v.idx() + 3 ) + "($a0) # load object variable " + v.id() + "\n" );
-            //Variable v = currClass.getVar( n.i.toString() );
-            //out.println( "lw $a0, " + -4 * ( v.idx() + 1 ) + "($fp) # load local variable " + v.id() + "\n" );
-            //System.out.println( "Doesn't support var " + n.i.toString() + " in class " + currClass.getId() );
-            //System.exit( -1 );
         }
         else
         {
             System.out.println( "Cannot find " + n.i.toString() + " in method " + currMethod.getId() );
             System.exit( -1 );
         }
-        // static variable
-        // dynamically allocated data
+
+        if ( ( v.type() instanceof IdentifierType ) || ( v.type() instanceof IntArrayType ) )
+        {
+            out.println( "beq  $a0, $zero, _null_pointer_exception\n" );
+        }
 
         out.println( "lw $t1, 8($sp)" );     // e1
         out.println( "lw $t2, 0($a0)" );     // length
@@ -597,15 +598,12 @@ public class CodeGenVisitor extends DepthFirstVisitor
             v = currClass.getVar( n.s );
             out.println( "lw $a0, " + 4 * ( currMethod.params.size() + 1 ) + "($fp) # load this" );
             out.println( "lw $a0, " + 4 * ( v.idx() + 3 ) + "($a0) # load object variable " + v.id() + "\n" );
-            //System.out.println( "Doesn't support var " + n.s + " in class " + currClass.getId() );
-            //System.exit( -1 );
         }
         else
         {
             System.out.println( "Cannot find " + n.s + " in method " + currMethod.getId() );
             System.exit( -1 );
         }
-        // dynamically allocated data, object data
         // set callClass here
         set_call_class( v.type() );
     }
@@ -716,6 +714,15 @@ public class CodeGenVisitor extends DepthFirstVisitor
             System.exit( -1 );
         }
         callClass = symbolTable.getClass( id_type.s );
+    }
+    
+    void check_null_pointer( Type type )
+    {
+        if ( ! ( ( type instanceof IdentifierType ) || ( type instanceof IntArrayType ) ) )
+        {
+            return;
+        }
+        System.out.println( "beq, $a0, $zero, _null_pointer_exception\n");
     }
 }
 
