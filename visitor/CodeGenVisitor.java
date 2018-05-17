@@ -86,6 +86,20 @@ public class CodeGenVisitor extends DepthFirstVisitor
         }
     }
 
+    // Identifier i;
+    // Identifier j;
+    // VarDeclList vl;
+    // MethodDeclList ml;
+    public void visit( ClassDeclExtends n )
+    {
+        String id = n.i.toString();
+        currClass = symbolTable.getClass( id );
+        for ( int i = 0; i < n.ml.size(); i++ )
+        {
+            n.ml.elementAt( i ).accept( this );
+        }
+    }
+
     // Type t;
     // Identifier i;
     // FormalList fl;
@@ -97,6 +111,11 @@ public class CodeGenVisitor extends DepthFirstVisitor
     {
         String id = n.i.toString();
         currMethod = currClass.getMethod( id );
+        if( null == currMethod )
+        {
+            System.out.println( "Cannot find method " + n.i.toString() + " in class " + currClass.getId() );
+            System.exit( -1 );
+        }
         String label = get_function_label( currClass.getId(), currMethod.getId() );
         out.println( label + ":\n" );
         out.println( "move $fp, $sp" );
@@ -397,13 +416,40 @@ public class CodeGenVisitor extends DepthFirstVisitor
         }
 
         String id = n.i.toString();
-        if ( !callClass.containsMethod( id ) )
+        /*if ( !callClass.containsMethod( id ) )
         {
-            System.out.println( "Cannot find " + id + " in class " + callClass.getId() );
+            System.out.println( "Cannot find method " + id + " in class " + callClass.getId() );
+            System.exit( -1 );
+        }*/
+        Class  callClass2 = callClass; // backup callClass since callClass may change when evaluate parameters
+        //Method callMethod = callClass.getMethod( id );
+        Method callMethod = null;
+
+        Class c = callClass2; // method class
+        String class_name = c.getId();
+        Method m = null;
+        while ( c != null )
+        {
+            if( c.containsMethod( id ) )
+            {
+                m = c.getMethod( id );
+                break;
+            }
+            if ( null == c.parent() )
+            {
+                c = null;
+            }
+            else
+            {
+                c = symbolTable.getClass( c.parent() );
+            }
+        }
+        if ( null == m )
+        {
+            System.out.println( "Cannnot find method " + id + " in class " + class_name );
             System.exit( -1 );
         }
-        Class  callClass2 = callClass; // backup callClass since callClass may change when evaluate parameters
-        Method callMethod = callClass.getMethod( id );
+        callMethod = m;
 
         // frame layout
         // old fp
@@ -428,7 +474,8 @@ public class CodeGenVisitor extends DepthFirstVisitor
         currClass  = callClass2;
         currMethod = callMethod;
         // call body
-        String label = get_function_label( currClass.getId(), currMethod.getId() );
+        //String label = get_function_label( currClass.getId(), currMethod.getId() );
+        String label = get_function_label( c.getId(), currMethod.getId() );
         out.println( "jal " + label + "\n" );
 
         // handle return value
@@ -672,6 +719,7 @@ public class CodeGenVisitor extends DepthFirstVisitor
 
     int get_object_size( String s )
     {
+
         Class c = symbolTable.getClass( s );
         if ( null == c )
         {
@@ -699,6 +747,35 @@ public class CodeGenVisitor extends DepthFirstVisitor
         // Attribute 2 ...
         return field_size + 3;
     }
+
+    /*int get_var_index( Class c, String s )
+    {
+        boolean found = false;
+        int field_size = 0;
+        int idx = 0;
+        while ( c != null )
+        {
+            if( c.containsVar( s ) )
+            {
+                Variable v = c.getVar( s );
+            }
+            field_size += c.fields.size();
+            if ( null == c.parent() )
+            {
+                c = null;
+            }
+            else
+            {
+                c = symbolTable.getClass( c.parent() );
+            }
+        }
+        // Class Tag
+        // Object Size
+        // Dispatch Ptr
+        // Attribute 1
+        // Attribute 2 ...
+        return field_size + 3;
+    }*/
 
     String get_function_label( String class_name, String method_name )
     {
@@ -730,5 +807,33 @@ public class CodeGenVisitor extends DepthFirstVisitor
         }
         System.out.println( "beq, $a0, $zero, _null_pointer_exception\n");
     }
+
+    String get_method( Class c, String method_name ) 
+    {
+        String class_name = c.getId();
+        Method m = null;
+        while ( c != null )
+        {
+            if( c.containsMethod( method_name ) )
+            {
+                m = c.getMethod( method_name );
+                break;
+            }
+            if ( null == c.parent() )
+            {
+                c = null;
+            }
+            else
+            {
+                c = symbolTable.getClass( c.parent() );
+            }
+        }
+        if ( null == m )
+        {
+            System.out.println( "Cannnot find method " + method_name + " in class " + class_name );
+            System.exit( -1 );
+        }
+        return get_function_label( c.getId(), m.getId() );
+    } 
 }
 
